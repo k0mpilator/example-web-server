@@ -18,15 +18,6 @@ import (
 	"github.com/jordan-wright/unindexed"
 )
 
-/*func loggingMiddleware(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// Do stuff here
-		log.Println(r.RequestURI)
-		// Call the next handler, which can be another middleware in the chain, or the final handler.
-		next.ServeHTTP(w, r)
-	})
-}*/
-
 // We'll need to define an Upgrader
 // this will require a Read and Write buffer size
 var upgrader = websocket.Upgrader{
@@ -61,32 +52,36 @@ func loggingHandler(next http.Handler) http.Handler {
 }
 
 func HomeHandler(w http.ResponseWriter, r *http.Request) {
-	//w.Write([]byte("This is HOME page\n"))
+
 	http.ServeFile(w, r, "static/home.html")
 }
 
 func SettingsHandler(w http.ResponseWriter, r *http.Request) {
-	//w.Write([]byte("This is SETTINGS page\n"))
+
 	http.ServeFile(w, r, "static/settings.html")
 }
 
 func AboutHandler(w http.ResponseWriter, r *http.Request) {
-	//w.Write([]byte("This is ABOUT page\n"))
+
 	http.ServeFile(w, r, "static/about.html")
 }
 
 func WebSocketHandler(w http.ResponseWriter, r *http.Request) {
-	conn, _ := upgrader.Upgrade(w, r, nil) // error ignored for sake of simplicity
+	// upgrade this connection to a WebSocket
+	// connection
+	conn, err := upgrader.Upgrade(w, r, nil)
+	if err != nil {
+		log.Println(err)
+	}
+
 	for {
 		// Read message from browser
 		msgType, msg, err := conn.ReadMessage()
 		if err != nil {
 			return
 		}
-
 		// Print the message to the console
 		log.Printf("%s sent: %s\n", conn.RemoteAddr(), string(msg))
-
 		// Write message back to browser
 		if err = conn.WriteMessage(msgType, msg); err != nil {
 			return
@@ -95,14 +90,16 @@ func WebSocketHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func ReadFileExample(filename string) (string, error) {
-	b, err := ioutil.ReadFile(filename) // just pass the file name
+	// just pass the file name
+	b, err := ioutil.ReadFile(filename)
 	if err != nil {
-		log.Print(err)
+		log.Println(err)
 	}
 
-	//log.Println(b) // print the content as 'bytes'
-
-	str := string(b) // convert content to a 'string'
+	// print the content as 'bytes'
+	//log.Println(b)
+	// convert content to a 'string'
+	str := string(b)
 	re := regexp.MustCompile(`Name=[a-zA-Z0-9]*`)
 	s := strings.Split(re.FindString(str), "=")
 	if len(s) < 2 {
@@ -138,7 +135,8 @@ func main() {
 	r.PathPrefix("/").Handler(http.FileServer(unindexed.Dir("static")))
 
 	srv := &http.Server{
-		Handler: r, // Pass our instance of gorilla/mux in.
+		// Pass our instance of gorilla/mux in.
+		Handler: r,
 		Addr:    "127.0.0.1:8888",
 		// Good practice: enforce timeouts for servers you create!
 		WriteTimeout: time.Second * 15,
@@ -158,10 +156,8 @@ func main() {
 	// We'll accept graceful shutdowns when quit via SIGINT (Ctrl+C)
 	// SIGKILL, SIGQUIT or SIGTERM (Ctrl+/) will not be caught.
 	signal.Notify(c, os.Interrupt)
-
 	// Block until we receive our signal.
 	<-c
-
 	// Create a deadline to wait for.
 	ctx, cancel := context.WithTimeout(context.Background(), wait)
 	defer cancel()
