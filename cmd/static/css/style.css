@@ -1,0 +1,5 @@
+# Empty CSS file for your own CSS
+.vertical-center-row {
+    display: table-cell;
+    vertical-align: middle;
+}
